@@ -12,7 +12,7 @@ export interface CanvasParams {
   rangeStartMs: number;
   rangeEndMs: number;
   timeRangeMs: number;
-}
+};
 
 // Helper to get canvas dimensions and drawing parameters
 export const getCanvasParams = (
@@ -437,9 +437,72 @@ export const plotDataOnCanvas = (
 };
 
 // Drawing for analysis graphs (combines centroidX and circular)
+export const drawPlaybackWave = (
+  canvas: HTMLCanvasElement,
+  waves: Wave[],
+  rangeStartMs: number,
+  rangeEndMs: number,
+  lapCount: number
+) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const params = getCanvasParams(canvas, rangeStartMs, rangeEndMs);
+  resizeAndClearCanvas(ctx, canvas, params);
+  const { width, height, rangeStartMs: currentRangeStartMs, timeRangeMs } = params;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const lapsPer1000ms = lapCount || 1;
+
+  if (waves.length === 0) return;
+
+  const numPoints = 1000;
+  const waveData = getCompositeWaveData(numPoints, currentRangeStartMs, timeRangeMs, waves);
+  const scaleFactor = waveData.maxAbsValue < 1e-9 ? 1.0 : waveData.maxAbsValue;
+
+  const baseRadius = Math.min(centerX, centerY) * 0.5;
+  const amplitudeScale = baseRadius * 0.8 / scaleFactor;
+
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.arc(centerX, centerY, baseRadius, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#67e8f9';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  let lastYWasPositive = false;
+
+  waveData.values.forEach((value, i) => {
+    const progress = i / (numPoints > 1 ? numPoints - 1 : 1);
+    const currentTimeMs = currentRangeStartMs + progress * timeRangeMs;
+
+    const angle = (currentTimeMs / 1000.0) * lapsPer1000ms * 2 * Math.PI;
+
+    const radius = baseRadius + value * amplitudeScale;
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+
+    const isYPositive = y < centerY;
+
+    if (isYPositive) {
+      if (i > 0 && lastYWasPositive) {
+        ctx.lineTo(x, y);
+      } else {
+        ctx.moveTo(x, y);
+      }
+    }
+    lastYWasPositive = isYPositive;
+  });
+  ctx.stroke();
+};
+
 export const drawAnalysisGraphs = (
   circularCanvas: HTMLCanvasElement,
   centroidXCanvas: HTMLCanvasElement,
+
   waves: Wave[],
   rangeStartMs: number,
   rangeEndMs: number,
@@ -502,4 +565,105 @@ export const getMarkerTimeFromEvent = (
     return Math.max(rangeStartMs, Math.min(rangeEndMs, rangeStartMs + (x / width) * timeRangeMs));
   }
   return null;
+};
+
+// Drawing for winding wave animation
+export const drawWindingWaveAnimation = (
+  canvas: HTMLCanvasElement,
+  waves: Wave[],
+  rangeStartMs: number,
+  rangeEndMs: number,
+  lapCount: number,
+  onAnimationEnd: () => void
+) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { cancel: () => {} };
+
+  const params = getCanvasParams(canvas, rangeStartMs, rangeEndMs);
+  const { width, height, midY, rangeStartMs: currentRangeStartMs, timeRangeMs } = params;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const lapsPer1000ms = lapCount || 1;
+
+  if (waves.length === 0) {
+    onAnimationEnd();
+    return { cancel: () => {} };
+  }
+
+  const numPoints = 1000;
+  const waveData = getCompositeWaveData(numPoints, currentRangeStartMs, timeRangeMs, waves);
+  const scaleFactor = waveData.maxAbsValue < 1e-9 ? 1.0 : waveData.maxAbsValue;
+  const baseRadius = Math.min(centerX, centerY) * 0.5;
+  const amplitudeScale = baseRadius * 0.8 / scaleFactor;
+  const linearAmplitude = (height * 0.4) / scaleFactor;
+
+  let animationFrameId: number;
+  const duration = 2000; // 2 seconds for the animation
+  const startTime = performance.now();
+
+  const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  const animate = (currentTime: number) => {
+    const elapsedTime = currentTime - startTime;
+    const overallAnimationProgress = Math.min(elapsedTime / duration, 1);
+
+    resizeAndClearCanvas(ctx, canvas, params);
+
+    // Draw the base circle
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.arc(centerX, centerY, baseRadius, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    // Draw the winding wave
+    ctx.strokeStyle = '#67e8f9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for (let i = 0; i < numPoints; i++) { // Loop over all points
+      const value = waveData.values[i];
+      const pointNormalizedPosition = i / (numPoints > 1 ? numPoints - 1 : 1);
+
+      // Calculate linear coordinates
+      const linearX = pointNormalizedPosition * width;
+      const linearY = midY - value * linearAmplitude;
+
+      // Calculate circular coordinates
+      const currentTimeMs = currentRangeStartMs + pointNormalizedPosition * timeRangeMs;
+      const angle = (currentTimeMs / 1000.0) * lapsPer1000ms * 2 * Math.PI;
+      const radius = baseRadius + value * amplitudeScale;
+      const circularX = centerX + radius * Math.cos(angle);
+      const circularY = centerY + radius * Math.sin(angle);
+
+      // Calculate localProgress for this point
+      const morphingWindowSize = 0.2; // e.g., 20% of the waveform length
+      let localProgress = Math.max(0, Math.min(1, (overallAnimationProgress - pointNormalizedPosition + morphingWindowSize) / morphingWindowSize));
+      localProgress = easeInOutCubic(localProgress);
+
+      const x = (1 - localProgress) * linearX + localProgress * circularX;
+      const y = (1 - localProgress) * linearY + localProgress * circularY;
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+
+    if (overallAnimationProgress < 1) {
+      animationFrameId = requestAnimationFrame(animate);
+    } else {
+      onAnimationEnd();
+    }
+  };
+
+  animationFrameId = requestAnimationFrame(animate);
+
+  return {
+    cancel: () => {
+      cancelAnimationFrame(animationFrameId);
+    },
+  };
 };
