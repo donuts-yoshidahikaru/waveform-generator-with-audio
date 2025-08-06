@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { NumericInput } from './NumericInput';
 
 interface GlobalControlsProps {
   range: { start: number; end: number; };
@@ -33,20 +34,18 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
         <div className="w-full max-w-xs">
           <label className="block text-sm font-medium text-gray-300 mb-2 text-center">表示範囲 (ms)</label>
           <div className="flex items-center justify-center gap-2">
-            <input
-              type="number"
+            <NumericInput
+              id="range-start"
+              label="開始"
               value={range.start}
-              onChange={(e) => onRangeChange({ ...range, start: Number(e.target.value) })}
-              step="0.01"
-              className="bg-gray-700 border border-gray-600 text-white text-center text-lg rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5 shadow-inner"
+              onChange={(newValue) => onRangeChange({ ...range, start: newValue })}
             />
-            <span className="text-gray-400">~</span>
-            <input
-              type="number"
+            <span className="text-gray-400 pt-8">~</span>
+            <NumericInput
+              id="range-end"
+              label="終了"
               value={range.end}
-              onChange={(e) => onRangeChange({ ...range, end: Number(e.target.value) })}
-              step="0.01"
-              className="bg-gray-700 border border-gray-600 text-white text-center text-lg rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5 shadow-inner"
+              onChange={(newValue) => onRangeChange({ ...range, end: newValue })}
             />
           </div>
         </div>
@@ -61,17 +60,14 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
       </div>
       {/* Lap Count Control */}
       <div className={`w-full max-w-xs ${viewMode === 'test' ? '' : 'hidden'}`}>
-        <label htmlFor="lapCount" className="block text-sm font-medium text-gray-300 mb-2 text-center">周回数 (/1000ms)</label>
         <div className="flex items-center gap-2">
-          <input
-            type="number"
+          <NumericInput
+            id="lapCount"
+            label="周回数 (/1000ms)"
             value={lapCount}
-            onChange={(e) => onLapCountChange(Number(e.target.value))}
-            step="0.1"
-            min="0"
-            className="bg-gray-700 border border-gray-600 text-white text-center text-lg rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5 shadow-inner"
+            onChange={onLapCountChange}
           />
-          <span className="text-sm text-gray-400 font-mono w-32 text-center">{lapsPerMsDisplay()}</span>
+          <span className="text-sm text-gray-400 font-mono w-32 text-center pt-8">{lapsPerMsDisplay()}</span>
         </div>
       </div>
     </div>

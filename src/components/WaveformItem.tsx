@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { drawIndividualWave } from '@/lib/canvasUtils';
 import type { Wave } from '@/lib/canvasUtils';
 import { useAudioContext } from '@/hooks/useAudioContext';
+import { NumericInput } from './NumericInput';
 
 interface WaveformItemProps {
   wave: Wave;
@@ -113,18 +114,13 @@ export const WaveformItem: React.FC<WaveformItemProps> = ({ wave, onUpdate, onRe
           onMouseLeave={onCanvasMouseDown} // Use the passed onCanvasMouseDown
         ></canvas>
       </div>
-      <div className="w-40 flex-shrink-0 flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg self-stretch justify-center">
-        <div>
-          <label htmlFor={`freq-${wave.id}`} className="text-sm font-medium text-gray-300 text-center block mb-1">周波数 (Hz)</label>
-          <input
-            type="number"
-            id={`freq-${wave.id}`}
-            value={wave.frequency}
-            onChange={(e) => onUpdate(wave.id, { frequency: Number(e.target.value) })}
-            step="0.1"
-            className="bg-gray-900 border border-gray-600 text-white text-center text-md rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2 shadow-inner"
-          />
-        </div>
+      <div className="w-40 flex-shrink-0 flex flex-col bg-gray-700/50 p-3 rounded-lg self-stretch justify-center">
+        <NumericInput
+          id={`freq-${wave.id}`}
+          label="周波数 (Hz)"
+          value={wave.frequency}
+          onChange={(newValue) => onUpdate(wave.id, { frequency: newValue })}
+        />
         <div>
           <label htmlFor={`phase-${wave.id}`} className="text-sm font-medium text-gray-300 text-center block mb-1">位相 (°)</label>
           <div className="flex items-center gap-2">
