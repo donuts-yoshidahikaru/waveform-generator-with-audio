@@ -333,9 +333,6 @@ export const drawCircularWave = (
   ctx.lineWidth = 2;
   ctx.beginPath();
 
-  let sumX = 0;
-  let sumY = 0;
-
   waveData.values.forEach((value, i) => {
     const progress = i / (numPoints > 1 ? numPoints - 1 : 1);
     const currentTimeMs = currentRangeStartMs + progress * timeRangeMs;
@@ -346,23 +343,110 @@ export const drawCircularWave = (
     const x = centerX + radius * Math.cos(angle);
     const y = centerY + radius * Math.sin(angle);
 
-    sumX += x;
-    sumY += y;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+};
+
+// Drawing for centroid X circular graph
+export const drawCentroidCircularGraph = (
+  canvas: HTMLCanvasElement,
+  waves: Wave[],
+  rangeStartMs: number,
+  rangeEndMs: number,
+  lapCount: number
+) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const params = getCanvasParams(canvas, rangeStartMs, rangeEndMs);
+  resizeAndClearCanvas(ctx, canvas, params);
+  const { width, height, rangeStartMs: currentRangeStartMs, timeRangeMs } = params;
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  if (waves.length === 0) return;
+
+  const numPoints = 1000; // Number of points to sample for the graph
+  const centroidXData: number[] = [];
+
+  const currentLapCount = lapCount || 1;
+  const lapStart = 0.1;
+  const lapEnd = Math.max(currentLapCount * 2, 1);
+  const lapRange = lapEnd - lapStart;
+
+  // Calculate centroid X values for a range of lap counts
+  for (let i = 0; i < numPoints; i++) {
+    const tempLap = lapStart + (i / (numPoints - 1)) * lapRange;
+    if (tempLap <= 0) {
+      centroidXData.push(0);
+      continue;
+    }
+    const centroid = calculateCentroidForLapCount(tempLap, rangeStartMs, rangeEndMs, waves);
+    centroidXData.push(centroid.x);
+  }
+
+  // Determine the scale for the centroid X values
+  const maxAbsCentroidX = Math.max(...centroidXData.map(Math.abs));
+  const scaleFactor = maxAbsCentroidX < 1e-9 ? 1.0 : maxAbsCentroidX;
+
+  const baseRadius = Math.min(centerX, centerY) * 0.5; // Base radius for the circle
+  const amplitudeScale = baseRadius * 0.8 / scaleFactor; // Scale centroid X to fit in circle
+
+  // Draw center lines
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 4]);
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(width, centerY);
+  ctx.moveTo(centerX, 0);
+  ctx.lineTo(centerX, height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw base circle
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, baseRadius, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Draw the centroid X circular graph
+  ctx.strokeStyle = '#facc15'; // Yellow color for centroid X
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  let sumPlotX = 0;
+  let sumPlotY = 0;
+
+  centroidXData.forEach((centroidX, i) => {
+    const progress = i / (numPoints > 1 ? numPoints - 1 : 1);
+    const angle = progress * 2 * Math.PI; 
+
+    const radius = baseRadius + centroidX * amplitudeScale;
+
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+
+    sumPlotX += x;
+    sumPlotY += y;
 
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
 
+  // Calculate and draw the centroid of the plotted circular graph
   if (numPoints > 0) {
-    const centroidX = sumX / numPoints;
-    const centroidY = sumY / numPoints;
+    const plotCentroidX = sumPlotX / numPoints;
+    const plotCentroidY = sumPlotY / numPoints;
+
     ctx.beginPath();
-    ctx.arc(centroidX, centroidY, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+    ctx.arc(plotCentroidX, plotCentroidY, 8, 0, 2 * Math.PI); // Larger circle for the overall centroid
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.9)'; // Green color
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.stroke();
   }
 };

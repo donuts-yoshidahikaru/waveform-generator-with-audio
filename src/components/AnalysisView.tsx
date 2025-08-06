@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { drawAnalysisGraphs, drawWindingWaveAnimation } from '@/lib/canvasUtils';
+import { drawCircularWave, drawWindingWaveAnimation } from '@/lib/canvasUtils';
+import { GravityGraph } from './GravityGraph';
 import type { Wave } from '@/lib/canvasUtils';
 
 interface AnalysisViewProps {
@@ -12,17 +13,14 @@ interface AnalysisViewProps {
 
 export const AnalysisView: React.FC<AnalysisViewProps> = ({ waves, range, lapCount }) => {
   const circularCanvasRef = useRef<HTMLCanvasElement>(null);
-  const centroidXCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const animationRef = useRef<{ cancel: () => void } | null>(null);
 
-  const drawGraphs = useCallback(() => {
+  const drawCircular = useCallback(() => {
     const circularCanvas = circularCanvasRef.current;
-    const centroidXCanvas = centroidXCanvasRef.current;
-    if (circularCanvas && centroidXCanvas) {
-      drawAnalysisGraphs(
+    if (circularCanvas) {
+      drawCircularWave(
         circularCanvas,
-        centroidXCanvas,
         waves,
         range.start,
         range.end,
@@ -51,28 +49,26 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ waves, range, lapCou
         animationRef.current?.cancel();
       };
     } else {
-      drawGraphs();
+      drawCircular();
     }
-  }, [isAnimating, waves, range, lapCount, drawGraphs]);
+  }, [isAnimating, waves, range, lapCount, drawCircular]);
 
   useEffect(() => {
     const circularCanvas = circularCanvasRef.current;
-    const centroidXCanvas = centroidXCanvasRef.current;
-    if (!circularCanvas || !centroidXCanvas) return;
+    if (!circularCanvas) return;
 
     const resizeObserver = new ResizeObserver(() => {
       if (!isAnimating) {
-        drawGraphs();
+        drawCircular();
       }
     });
 
     resizeObserver.observe(circularCanvas);
-    resizeObserver.observe(centroidXCanvas);
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, [isAnimating, drawGraphs]);
+  }, [isAnimating, drawCircular]);
 
   const handlePlayAnimation = () => {
     if (!isAnimating) {
@@ -91,9 +87,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ waves, range, lapCou
         </div>
       </div>
       <div className="w-3/5 flex flex-col justify-center">
-        <div className="w-full h-3/5 bg-gray-900 rounded-lg border border-gray-700 p-2">
-          <canvas ref={centroidXCanvasRef}></canvas>
-        </div>
+        <GravityGraph
+          waves={waves}
+          range={range}
+          lapCount={lapCount}
+          className="h-3/5"
+        />
       </div>
     </div>
   );

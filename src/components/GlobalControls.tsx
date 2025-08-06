@@ -6,8 +6,8 @@ import { NumericInput } from './NumericInput';
 interface GlobalControlsProps {
   range: { start: number; end: number; };
   onRangeChange: (newRange: { start: number; end: number; }) => void;
-  viewMode: 'wave' | 'test';
-  onViewModeChange: (mode: 'wave' | 'test') => void;
+  viewMode: 'wave' | 'test' | 'inverse';
+  onViewModeChange: (mode: 'wave' | 'test' | 'inverse') => void;
   lapCount: number;
   onLapCountChange: (count: number) => void;
 }
@@ -55,6 +55,7 @@ export const GlobalControls: React.FC<GlobalControlsProps> = ({
           <div className="relative flex items-center justify-center bg-gray-700 rounded-lg p-1">
             <button onClick={() => onViewModeChange('wave')} className={`mode-btn flex-1 text-center text-sm py-2 rounded-md transition-colors ${viewMode === 'wave' ? 'bg-cyan-600 text-white' : 'text-gray-400'}`}>波形編集</button>
             <button onClick={() => onViewModeChange('test')} className={`mode-btn flex-1 text-center text-sm py-2 rounded-md transition-colors ${viewMode === 'test' ? 'bg-cyan-600 text-white' : 'text-gray-400'}`}>円形分析</button>
+            <button onClick={() => onViewModeChange('inverse')} className={`mode-btn flex-1 text-center text-sm py-2 rounded-md transition-colors ${viewMode === 'inverse' ? 'bg-cyan-600 text-white' : 'text-gray-400'}`}>逆フーリエ変換</button>
           </div>
         </div>
       </div>
