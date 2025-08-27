@@ -6,7 +6,7 @@ import { GlobalControls } from '@/components/GlobalControls';
 import { CompositeWaveform } from '@/components/CompositeWaveform';
 import { WaveformList } from '@/components/WaveformList';
 import { AnalysisView } from '@/components/AnalysisView';
-import { InverseFourierView } from '@/components/InverseFourierView'; // Import the new view
+
 import { getMarkerTimeFromEvent } from '@/lib/canvasUtils';
 import { useAudioContext } from '@/hooks/useAudioContext';
 
@@ -22,7 +22,7 @@ const WaveformGeneratorPage: NextPage = () => {
   const [waves, setWaves] = useState<Wave[]>([{ id: 0, frequency: 440, phase: 90 }]);
   const [nextWaveId, setNextWaveId] = useState(1);
   const [range, setRange] = useState({ start: 0, end: 16 });
-  const [viewMode, setViewMode] = useState<'wave' | 'test' | 'inverse'>('wave'); // Add 'inverse' to viewMode
+  const [viewMode, setViewMode] = useState<'wave' | 'test'>('wave');
   const [lapCount, setLapCount] = useState(60);
   const [compositeVolume, setCompositeVolume] = useState(50);
   const [compositeIsPlaying, setCompositeIsPlaying] = useState(false);
@@ -93,11 +93,7 @@ const WaveformGeneratorPage: NextPage = () => {
     };
   }, [stopAllAudio]);
 
-  // Determine the translation percentage based on the view mode
-  const getSliderPosition = () => {
-    if (viewMode === 'inverse') return '-50%';
-    return '0%';
-  };
+  
 
   return (
     <div className="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -112,49 +108,32 @@ const WaveformGeneratorPage: NextPage = () => {
           onLapCountChange={setLapCount}
         />
 
-        {/* Main content area with sliding animation */}
-        <div className="w-full max-w-[900px] overflow-hidden">
-          <div 
-            className="w-[200%] flex transition-transform duration-500 ease-in-out"
-            style={{ transform: `translateX(${getSliderPosition()})` }}
-          >
-            {/* View 1: Waveform Editing and Analysis */}
-            <div className="w-1/2 flex flex-col items-center gap-4">
-              <CompositeWaveform
+        {/* Main content area */}
+        <div className="w-full max-w-[900px] flex flex-col items-center gap-4">
+          <CompositeWaveform
+            waves={waves}
+            range={range}
+            viewMode={viewMode}
+            lapCount={lapCount}
+            volume={compositeVolume}
+            onVolumeChange={setCompositeVolume}
+            isPlaying={compositeIsPlaying}
+            onTogglePlay={toggleCompositePlay}
+            markerTime={markerTime}
+            onMouseDown={onCanvasMouseDown}
+          />
+          <div className="w-full max-w-[900px] overflow-hidden">
+            <div className={`w-[200%] flex sliding-panel-container ${viewMode === 'test' ? 'is-slid' : ''}`}>
+              <WaveformList
                 waves={waves}
+                onUpdateWave={updateWave}
+                onRemoveWave={removeWave}
+                onAddWave={addWave}
                 range={range}
-                viewMode={viewMode}
-                lapCount={lapCount}
-                volume={compositeVolume}
-                onVolumeChange={setCompositeVolume}
-                isPlaying={compositeIsPlaying}
-                onTogglePlay={toggleCompositePlay}
                 markerTime={markerTime}
-                onMouseDown={onCanvasMouseDown}
+                onCanvasMouseDown={onCanvasMouseDown}
               />
-              <div className="w-full max-w-[900px] overflow-hidden">
-                <div className={`w-[200%] flex sliding-panel-container ${viewMode === 'test' ? 'is-slid' : ''}`}>
-                  <WaveformList
-                    waves={waves}
-                    onUpdateWave={updateWave}
-                    onRemoveWave={removeWave}
-                    onAddWave={addWave}
-                    range={range}
-                    markerTime={markerTime}
-                    onCanvasMouseDown={onCanvasMouseDown}
-                  />
-                  <AnalysisView
-                    waves={waves}
-                    range={range}
-                    lapCount={lapCount}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* View 2: Inverse Fourier Transform */}
-            <div className="w-1/2">
-              <InverseFourierView 
+              <AnalysisView
                 waves={waves}
                 range={range}
                 lapCount={lapCount}

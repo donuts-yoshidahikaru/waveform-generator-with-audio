@@ -520,6 +520,111 @@ export const plotDataOnCanvas = (
   ctx.fillText(label, 5, 15);
 };
 
+// Helper to get the X-coordinate of the green centroid for a given lapCount
+export const getGreenCentroidXForLapCount = (
+  waves: Wave[],
+  rangeStartMs: number,
+  rangeEndMs: number,
+  lapCount: number
+): number => {
+  const numPoints = 1000; // Same number of points as drawCentroidCircularGraph
+  const centroidXData: number[] = [];
+
+  const currentLapCount = lapCount || 1;
+  const lapStart = 0.1;
+  const lapEnd = Math.max(currentLapCount * 2, 1);
+  const lapRange = lapEnd - lapStart;
+
+  // Calculate centroid X values for a range of lap counts (as done in drawCentroidCircularGraph)
+  for (let i = 0; i < numPoints; i++) {
+    const tempLap = lapStart + (i / (numPoints - 1)) * lapRange;
+    if (tempLap <= 0) {
+      centroidXData.push(0);
+      continue;
+    }
+    const centroid = calculateCentroidForLapCount(tempLap, rangeStartMs, rangeEndMs, waves);
+    centroidXData.push(centroid.x);
+  }
+
+  // Determine the scale for the centroid X values
+  const maxAbsCentroidX = Math.max(...centroidXData.map(Math.abs));
+  const scaleFactor = maxAbsCentroidX < 1e-9 ? 1.0 : maxAbsCentroidX;
+
+  // Simulate the circular graph's X-coordinate calculation to get the centroid of that graph
+  let sumPlotX = 0;
+  // We need dummy centerX and centerY for this calculation, as it's just about relative positions
+  const dummyWidth = 200; // Arbitrary, just for consistent scaling
+  const dummyHeight = 200;
+  const dummyCenterX = dummyWidth / 2;
+  const dummyCenterY = dummyHeight / 2;
+  const baseRadius = Math.min(dummyCenterX, dummyCenterY) * 0.5;
+  const amplitudeScale = baseRadius * 0.8 / scaleFactor;
+
+  centroidXData.forEach((centroidX, i) => {
+    const progress = i / (numPoints > 1 ? numPoints - 1 : 1);
+    const angle = progress * 2 * Math.PI; 
+
+    const radius = baseRadius + centroidX * amplitudeScale;
+
+    const x = dummyCenterX + radius * Math.cos(angle);
+    sumPlotX += x;
+  });
+
+  return (numPoints > 0) ? sumPlotX / numPoints : 0;
+};
+
+// Drawing for green centroid X variation graph
+export const drawGreenCentroidXVariationGraph = (
+  canvas: HTMLCanvasElement,
+  waves: Wave[],
+  rangeStartMs: number,
+  rangeEndMs: number,
+  lapCount: number
+) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const params = getCanvasParams(canvas, rangeStartMs, rangeEndMs);
+  resizeAndClearCanvas(ctx, canvas, params);
+  const { width } = params;
+
+  if (waves.length === 0 || width <= 1) return;
+
+  const greenCentroidXData: number[] = [];
+
+  const currentLapCount = lapCount || 1;
+  const lapStart = 0.1;
+  const lapEnd = Math.max(currentLapCount * 2, 1);
+  const lapRange = lapEnd - lapStart;
+
+  // Generate data points for the graph
+  for (let i = 0; i < width; i++) {
+    const tempLap = lapStart + (i / (width - 1)) * lapRange;
+    if (tempLap <= 0) {
+      greenCentroidXData.push(0);
+      continue;
+    }
+    const greenCentroidX = getGreenCentroidXForLapCount(waves, rangeStartMs, rangeEndMs, tempLap);
+    greenCentroidXData.push(greenCentroidX);
+  }
+
+  // Get the current green centroid X for the marker
+  const currentGreenCentroidX = getGreenCentroidXForLapCount(waves, rangeStartMs, rangeEndMs, currentLapCount);
+
+  plotDataOnCanvas(
+    ctx,
+    greenCentroidXData,
+    "緑重心X座標の変異",
+    lapStart,
+    lapRange,
+    "",
+    { x: currentLapCount, y: currentGreenCentroidX },
+    canvas,
+    rangeStartMs,
+    rangeEndMs
+  );
+};
+
 // Drawing for analysis graphs (combines centroidX and circular)
 export const drawPlaybackWave = (
   canvas: HTMLCanvasElement,
@@ -652,6 +757,7 @@ export const getMarkerTimeFromEvent = (
 };
 
 // Drawing for winding wave animation
+
 export const drawWindingWaveAnimation = (
   canvas: HTMLCanvasElement,
   waves: Wave[],
