@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import { drawCentroidXVariationGraph } from '@/lib/canvasUtils';
+import { drawGreenCentroidXVariationGraph } from '@/lib/canvasUtils';
 import type { Wave } from '@/lib/canvasUtils';
 
 interface CentroidXVariationGraphProps {
@@ -18,7 +18,7 @@ export const CentroidXVariationGraph: React.FC<CentroidXVariationGraphProps> = (
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    drawCentroidXVariationGraph(
+    drawGreenCentroidXVariationGraph(
       canvas,
       waves,
       range.start,
