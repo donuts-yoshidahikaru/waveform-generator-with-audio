@@ -136,7 +136,7 @@ export const WaveformItem: React.FC<WaveformItemProps> = ({ wave, onUpdate, onRe
             <span className="text-xs font-mono text-cyan-300 w-9 text-center">{wave.phase}°</span>
           </div>
         </div>
-        <button onClick={() => setIsPlaying(!isPlaying)} className={`audio-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs transition-all flex items-center justify-center gap-1 ${isPlaying ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+        <button onClick={() => setIsPlaying(!isPlaying)} className={`audio-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs transition-all flex items-center justify-center gap-1 mt-2 ${isPlaying ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
           {isPlaying ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
           ) : (
